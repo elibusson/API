@@ -1,0 +1,186 @@
+#----------------------------------------------------------------
+#--------------------------generales-----------------------------
+#----------------------------------------------------------------
+
+
+numeroid="3"
+list =[]
+labbdd=[]
+apiresponse=[]
+apistat=""
+webscrapping=[]
+
+#----------------------------------------------------------------
+#----------------------------bbdd--------------------------------
+#----------------------------------------------------------------
+
+
+def buscar_base_datos(labbdd):
+    import pyodbc
+
+    for driver in pyodbc.drivers():
+        print(driver)
+        
+    import mysql.connector
+    import pandas as pd
+
+    server = 'localhost'
+    db = 'node_mysql_crud_db'
+    usuario = 'root'
+    contrasena = '123'
+
+
+    try:
+        mydb = mysql.connector.connect(
+        host=server,
+        user=usuario,
+        password=contrasena,
+        database=db
+        )
+        
+        mycursor = mydb.cursor()
+        
+        mycursor.execute("SELECT * FROM employees WHERE id="+numeroid)
+
+        myresult = mycursor.fetchall()
+
+        df = pd.DataFrame(myresult)
+        
+    except:
+        print("error al intentar conectarse")
+        
+
+    for i in myresult:
+        list.append(i)
+    
+    labbddi=list[0][:7]
+
+    for i in labbddi:
+        labbdd.append(i)
+    
+#---------------------------------------------------------------   
+#----------------------------apiresponse------------------------
+#---------------------------------------------------------------
+
+
+def peticionapi(apiresponse, apistat):
+    import requests
+    import json
+    import jsonpath
+
+
+
+    url="http://localhost:5000/api/v1/employees/"+numeroid
+
+    #GET
+    response=requests.get(url)
+    apistat=response.status_code
+    print(apistat)
+    
+    json_response=json.loads(response.text)
+    #fetch value using json path
+
+    listaindices=[]
+
+    for i in json_response[0]:
+        listaindices.append(i)
+        
+
+    for i in listaindices:
+        apiresponse.append(json_response[0][i])
+
+
+#---------------------------------------------------------------
+#----------------------------selenium---------------------------
+#---------------------------------------------------------------
+
+import pytest
+import time
+import json
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+import unittest
+
+
+class TestUntitled(unittest.TestCase):
+    
+  #---------------------------------------------------------------
+  #------------------webscrapping---------------------------------
+  #---------------------------------------------------------------
+  
+  #realizando web scrapping---------------------------------------
+  print("-------------Realizando web scrapping-------------------")
+  time.sleep(3)
+    
+  def setUp(self):
+    self.driver = webdriver.Chrome(executable_path=r"/usr/lib/chromium-browser/chromedriver")
+    self.vars = {}
+  
+
+  def test_untitled(self):
+    self.driver.get("http://127.0.0.1:5500/frontend/index.html")
+    self.driver.set_window_size(1440, 759)
+    
+    element=self.driver.find_element(By.XPATH, "/html/body/input")
+    element.click()
+    self.driver.find_element(By.XPATH, "/html/body/input").send_keys(numeroid)
+    self.driver.find_element(By.XPATH, "//*[@id='peticion']").click()
+    time.sleep(1)
+    listadom=self.driver.find_elements_by_class_name('li')
+
+    
+    webscrapping=[]
+    for i in listadom:
+        dato=i.get_attribute('innerHTML')
+        webscrapping.append(dato)
+    
+    webscrapping[0]=int(webscrapping[0])
+    
+    webscrappingfinal=webscrapping[:7]
+    
+    def teardown_method(self, method):
+        self.driver.quit()  
+    
+    #------------resultados-----------------------------------------
+    
+    #llamando a la base de datos
+    print("---------------------llamando a bbdd---------------------")
+    buscar_base_datos(labbdd)
+    time.sleep(3)
+    #llamando a la api
+    print("---------------------llamando a api-----------------------")
+    peticionapi(apiresponse, apistat)
+    time.sleep(3)
+
+    
+    #resultados
+    print("---------------------resultados:----------------------")
+    print("---------------------bbdd:--------------------")
+    print(labbdd[:7])
+    
+    
+    print("---------------------api:------------------------")
+    print(apiresponse[:7])
+
+    print("---------------------webscrapping:---------------")
+    print(webscrapping[:7]) 
+
+   
+    print("---------------------backend testing--------------------")
+    assert labbdd[:7]==apiresponse[:7]
+    if labbdd[:7]==apiresponse[:7]:
+        print("----------testeo ok-------------")
+    print("---------------------testeo frontend--------------------")
+    assert webscrapping[:7]==apiresponse[:7]
+    if webscrapping[:7]==apiresponse[:7]:
+        print("----------testeo ok-------------")
+
+    
+ 
+if __name__ == "__main__":
+    unittest.main() 
